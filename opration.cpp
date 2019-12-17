@@ -1,7 +1,6 @@
 #include <iostream>
 #include "charger.h"
 
-#define NUM 4
 using namespace std;
 
 /*calculate voltages of cells
@@ -37,7 +36,7 @@ void DisableTimer(void)
 //求电压最大值
 double MaxOfCell(double cell[])
 {
-	int max = cell[0];
+	double max = cell[0];
 	for (int i = 0; i < NUM; i++)
 		if (cell[i] > max) max = cell[i];
 	return max;
@@ -46,7 +45,7 @@ double MaxOfCell(double cell[])
 //求电压最小值
 double MinOfCell(double cell[])
 {
-	int min = cell[0];
+	double min = cell[0];
 	for (int i = 0; i < NUM; i++)
 		if (cell[i] < min) min = cell[i];
 	return min;
@@ -55,7 +54,7 @@ double MinOfCell(double cell[])
 //求总电压
 double SumOfCell(double cell[])
 {
-	int sum = 0;
+	double sum = 0;
 	for (int i = 0; i < NUM; i++) sum += cell[i];
 	return sum;
 }

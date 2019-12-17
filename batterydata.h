@@ -25,16 +25,17 @@ inline string Batterydata::GetBatteryData()  //内联函数
 	file.open("D:\\data.txt", ios::in);
 	//	if (!file.is_open())          //如果文件未正确打开
 	//         cout << "failed!" << endl;
-	std::string strLine, str;          //是否可以放在主函数前声明
-	while(getline(file, strLine)){}
-	if (strLine.size() >= 29) {
-		for (long i = 0; i < strLine.size(); i++) {
-			if (strLine[i] == 'i' && strLine[i + 28] == 'o') {
-				for (int j = 0; j <= 28; j++) str[j] = strLine[i + j];
-			}
+	std::string str;          //是否可以放在主函数前声明
+	if (file) // 有该文件
+	{
+		istreambuf_iterator<char> beg(file), end;
+		string strdoc(beg, end);                                  //将文件的内容全部读取到str之中
+		for (int i = 0; i < strdoc.size() - 28; i++) 
+		{
+			if (strdoc[i] == 'i' && strdoc[i + 28] == 'o') str = strdoc.substr(i, i + 28);
 		}
-//		return str;
 	}
+	
 	return str;
 	
 }

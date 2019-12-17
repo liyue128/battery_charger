@@ -6,8 +6,8 @@
 #define D1 0.02
 #define D2 0.08
 #define RECH 4.1
-#define VLOWV 9.3
-#define VRECH 12.3
+#define VLOWV 12.4
+#define VRECH 16.4
 #define BATTERY_ABSENT 0
 #define EXTREMLY_IMBALANCE 1
 #define CHARGE_COMPLETE 2
@@ -67,10 +67,10 @@ void CellBypass(double cell[NUM], double min)
 			cout << "close outer bypass of " << i << endl;
 		}  //打开外部放电旁路
 
-		if (cell[i] > D1 + D2)
+		if (cell[i] - min > D1 + D2)
 		{
-			cout << "open inner bypass of " << i << endl;
-			cout << "open outer bypass of " << i << endl;
+			cout << "close inner bypass of " << i << endl;
+			cout << "close outer bypass of " << i << endl;
 		}
 	}
 }
@@ -102,6 +102,7 @@ void ChargeComplete(void)
 	SwStart();
 	DisableTimer();
 //	SW = 0;
+	cout << "charge complete" << endl;
 	cout << "亮黄灯" << endl;
 	cout << "delay T1" << endl;
 }
@@ -109,7 +110,7 @@ void ChargeComplete(void)
 //充电异常
 void Abnormal(void)
 {
-	SwStart();
+	SwEnd();
 	DisableTimer();
 //	SW = 0;
 	cout << "亮红灯, 蜂鸣" << endl;
@@ -117,8 +118,9 @@ void Abnormal(void)
 }
 
 //预充电状态
-void Precharge(void)
+void Precharge(bool * flag)
 {
+	* flag = 0;
 	SwStart();
 	DisableTimer();
 	InCharging();
@@ -127,19 +129,22 @@ void Precharge(void)
 }
 
 //恒流充电状态
-void EqualCurrent(double cell_voltage[NUM])
+void EqualCurrent(double cell_voltage[NUM], bool * flag)
 {
 	double max_of_cell = MaxOfCell(cell_voltage);
 	double min_of_cell = MinOfCell(cell_voltage);
 
+	*flag = 0;
 	SwStart();
-	DisableTimer();
+ 	DisableTimer();
 	InCharging();
 	cout << "stage of equalcurrent" << endl;
 	if (max_of_cell - min_of_cell > D1) {
 		CellBalancing(cell_voltage, min_of_cell);
 	}
-	cout << "delay T4" << endl;
+	else {
+		cout << "delay T4" << endl;
+	}
 }
 
 //恒压充电状态
@@ -153,16 +158,14 @@ void EqualVoltage(void)
 }
 
 //极端不平衡状态标志
-int ExtermlyImbalanceFlag(double cell_voltage[NUM], int extermly_imbalance_flag)
+bool ExtermlyImbalanceFlag(double cell_voltage[NUM], bool extermly_imbalance_flag)
 {
 	double max_of_cell = MaxOfCell(cell_voltage);  //求最大值
 	double min_of_cell = MinOfCell(cell_voltage);  //求最小值
 	double sum_of_cell = SumOfCell(cell_voltage);  //求和
-
-	SwEnd();
-	EnableTimer();
-	int flag = max_of_cell - min_of_cell > D1&& sum_of_cell > VLOWV&& \
-		(max_of_cell > RECH || extermly_imbalance_flag);
+	
+	int flag = (max_of_cell - min_of_cell > D1) && (sum_of_cell > VLOWV) && \
+		((max_of_cell >= RECH) || extermly_imbalance_flag);
 	return flag;
 }
 
@@ -173,6 +176,9 @@ int DischargeInExtrem(double cell_voltage[NUM])
 	double min_of_cell = MinOfCell(cell_voltage);  //求最小值
 	bool timerout = false;
 
+	SwEnd();
+	EnableTimer();
+	cout << "extremly imbalance" << endl;
 	if (timerout)  //计时器超时
 	{
 		extermly_imbalance_flag = 0;
