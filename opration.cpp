@@ -20,17 +20,15 @@ double calcute(data)
 //使能计时器
 void EnableTimer(void)
 {
+	//若计时器未开启，则使能计时器
 	printf("start timer.\n");
-	//	TIM_Cmd(TIM1, ENABLE);
-//	TIMER_SWITCH_FLAG = 1;
 }
 
 //禁用计时器
 void DisableTimer(void)
 {
+	//若计时器已开启,则禁用计时器
 	printf("end timer.\n");
-	//	TIM_Cmd(TIM1, DISABLE);
-//	TIMER_SWITCH_FLAG = 0;
 }
 
 //求电压最大值
@@ -60,14 +58,41 @@ double SumOfCell(double cell[])
 }
 
 //闭合开关
-void SwStart(void)
+void SwStart(bool* SW1)
 {
+	//若开关已断开,则闭合开关
+	if (!*SW1) {
+		*SW1 = true;
+	}
+
 	cout << "SW = 1" << endl;
 }
 
 //断开开关
-void SwEnd(void)
+void SwEnd(bool* SW1)
 {
+	//若开关已闭合,则断开开关
+	if (*SW1) {
+		*SW1 = false;
+	}
+
 	cout << "SW = 0" << endl;
 }
 
+void NotInExtrem(bool* SW1)
+{
+	SwStart(SW1);
+	DisableTimer();
+}
+
+void InExtrem(bool* SW1)
+{
+	SwEnd(SW1);
+	EnableTimer();
+}
+
+void NotDetectBat(bool* SW1)
+{
+	SwEnd(SW1);
+	DisableTimer();
+}

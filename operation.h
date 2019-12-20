@@ -7,7 +7,10 @@ void DisableTimer(void);
 double MaxOfCell(double cell[]);
 double MinOfCell(double cell[]);
 double SumOfCell(double cell[]);
-void SwStart(void);
-void SwEnd(void);
+void SwStart(bool* SW1);
+void SwEnd(bool* SW1);
+void NotInExtrem(bool* SW1);
+void InExtrem(bool* SW1);
+void NotDetectBat(bool* SW1);
 
 #endif

@@ -32,9 +32,6 @@
     <ClInclude Include="charger.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="batterydata.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
     <ClInclude Include="main.h">
       <Filter>头文件</Filter>
     </ClInclude>

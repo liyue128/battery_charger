@@ -129,7 +129,6 @@
     <ClCompile Include="opration.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="batterydata.h" />
     <ClInclude Include="charger.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="operation.h" />
