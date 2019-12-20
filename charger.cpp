@@ -6,28 +6,6 @@
 
 using namespace std;
 
-void DataCollection(double cell_voltage[NUM], int* bat, int* stat1, int* stat2, bool* SW1)
-{
-#ifdef i2c_data
-	//从I2C接受的数据提取电压计算所需数据，IO口读取BAT,STAT1,STAT2的信息    
-	data = DataGet_1();  //从i2c以及IO接收到的数据中提取有效信息,属于主体编程的内容
-	v = calculate(data);
-	bat = FXinn  //即GPIO口Xn收到输入电平
-		stat1 = ;
-	stat2 = ;
-	//同理,可解析得stat1和stat2的值
-
-#else
-	//从文件中接收到的数据,逐行读取,将读取到的数据翻译成所需要的数据类型   
-	Batterydata Battery_data;
-	Battery_data.CellVoltage(cell_voltage);
-	*bat = Battery_data.LevelOfAfe();
-	*stat1 = Battery_data.levelOfStat1();
-	*stat2 = Battery_data.levelOfStat2();
-	*SW1 = Battery_data.levelOfSw();
-#endif
-}
-
 
 
 //开启相应的旁路

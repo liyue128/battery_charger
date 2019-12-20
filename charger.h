@@ -4,8 +4,6 @@
 
 #define NUM 4
 
-void DataCollection(double cell_voltage[NUM], int* bat, int* stat1, int* stat2, bool* SW1);
-
 void CellBypass(double cell[NUM], double min);
 void OpenAllBypass(void);
 void CellBalancing(double cell[NUM], double min);

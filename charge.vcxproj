@@ -123,7 +123,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="batterydata.cpp" />
     <ClCompile Include="charger.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="opration.cpp" />

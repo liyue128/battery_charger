@@ -28,6 +28,7 @@ using namespace std;
 #define T4 100
 #define T5 80
 
+void ChargeProcess(string s, string line_data);
 void StateConvert(double sum, int* stat1, int* stat2);
 
 enum {
@@ -40,16 +41,5 @@ enum {
 	EQUAL_VOLTAGE,
 };
 
-class Batterydata  // class declaration
-{
-private:
-	string GetBatteryData(void);
-public:
-	void CellVoltage(double voltage_of_cell[NUM]);
-	int LevelOfAfe(void);
-	int levelOfStat1(void);
-	int levelOfStat2(void);
-	int levelOfSw(void);
-};    // note semicolon at the end
 
 #endif
