@@ -1,26 +1,20 @@
 #include "main.h"
 #include <iostream>
+#include <Windows.h>
+#include <iostream>
+#include <fstream>
 #include "operation.h"
 #include "charger.h"
 
 using namespace std;
 
-struct voltage
-{
-	int bat, stat1, stat2;
-	double cell_voltage[NUM];
-	bool SW1;
-
-	voltage()
-	{
-		memset(this, 0, sizeof(voltage));  //结构体初始化
-	}
-}*cell_struct;//定义结构体
-voltage DataReceive(string s);
+TypeOfStruct DataReceive(string s);
+void StateConvert(TypeOfStruct* cell_structure);
+void ChargeProcess(string s, string line_data);
 
 int main()
 {
-	string s1 = "d:\\test\\o\\extrem";
+	string s1 = "d:\\test\\o\\testfile";
 	string s2 = ".txt";
 	char j = '1';
 	
@@ -46,54 +40,54 @@ void ChargeProcess(string s, string line_data)
 	bool extermly_imbalance_bit = 0;
 	double sum_of_cell = 0;
 	int state_of_charger = BATTERY_ABSENT;
-	int t = 0;
+	int t = 0;  //模拟计时器
 
-	cell_struct = new voltage;
+	TypeOfStruct *charger_data_structure;
+	charger_data_structure = new TypeOfStruct;
 
 	//数据接收端口,接收并解析数据
-	*cell_struct = DataReceive(line_data);
+	*charger_data_structure = DataReceive(line_data);
 
 	//测试文件的第一行, 为充电数据结构的注释(调用向文件中写入的库)
 	ofstream outData(s);
-	outData << "#数据结构: i cell[0] cell[1] cell[2] cell[3] bat stat1 stat2 SW1 o" << endl;
+	outData << "#数据结构: i cell[0] cell[1] cell[2] cell[3] bat stat1 stat2 SW1 o, 默认初始状态为未检测到电池状态" << endl;
 	//	outData.close();//从键盘输入并写入文件
 
 	while (1) {
-		sum_of_cell = SumOfCell(cell_struct->cell_voltage);
+		sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
 
 		//检测电池
-		if (!cell_struct->bat) {
+		if (!charger_data_structure->bat) {
 			state_of_charger = BATTERY_ABSENT;
 		}
 
 		//检测异常
 		if (state_of_charger >= PRECHARGE && state_of_charger <= EQUAL_VOLTAGE) {
-			if (cell_struct->stat1 == 0 && cell_struct->stat2 == 0) {
+			if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == false) {
 				state_of_charger = CHARGE_ABNORMAL;
 			}
 		}
 
 		//极端不平衡状态检测接口
-		extermly_imbalance_flag = ExtermlyImbalanceFlag(cell_struct->cell_voltage, extermly_imbalance_bit);
+		extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
 		cout << "delay  Tn" << endl;  //该阶段消耗的时间为Tn
 
 		switch (state_of_charger)
 		{
 		case BATTERY_ABSENT:
-			BatteryAbsent(cell_struct->cell_voltage, &cell_struct->stat1, &cell_struct->stat2, &cell_struct->SW1);
+			BatteryAbsent(charger_data_structure);
 			/**************状态跳转*****************/
-			if (cell_struct->bat) {
-				state_of_charger = ChargeStateJudge(cell_struct->bat, extermly_imbalance_flag, cell_struct->cell_voltage, cell_struct->stat1, cell_struct->stat2);
+			if (charger_data_structure->bat) {
+				state_of_charger = ChargeStateJudge(charger_data_structure, extermly_imbalance_flag);  //未检测到电池状态可能跳转到任意状态
 			}
 			break;
 
 		case EXTREMLY_IMBALANCE:
-			extermly_imbalance_bit = DischargeInExtrem(cell_struct->cell_voltage, &cell_struct->SW1);
+			extermly_imbalance_bit = DischargeInExtrem(charger_data_structure);
 			/**************状态跳转*****************/
-			sum_of_cell = SumOfCell(cell_struct->cell_voltage);  //更新电压总和
-			extermly_imbalance_flag = ExtermlyImbalanceFlag(cell_struct->cell_voltage, extermly_imbalance_bit);  //更新极端不平衡标识
-			//放电计时器超时检测
-			if (++t >= 20) { state_of_charger = CHARGE_ABNORMAL; }
+			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);  //更新电压总和
+			extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);  //更新极端不平衡标识位
+			if (++t >= 30) { state_of_charger = CHARGE_ABNORMAL; }  //模拟MCU充电计时器超时
 			if (sum_of_cell < VLOWV) {
 				state_of_charger = PRECHARGE;
 			}
@@ -108,29 +102,29 @@ void ChargeProcess(string s, string line_data)
 			break;
 
 		case CHARGE_COMPLETE:
-			ChargeComplete(&cell_struct->SW1);
+			ChargeComplete(charger_data_structure);
 			state_of_charger = BATTERY_ABSENT;  //假设一旦检测到电池充满电就移除电池,仅用于模拟
 			break;
 
 		case CHARGE_ABNORMAL:
-			Abnormal(&cell_struct->SW1);
+			Abnormal(charger_data_structure);
 			state_of_charger = BATTERY_ABSENT;  //仅用于模拟
 			break;
 
 		case PRECHARGE:
-			Precharge(cell_struct->cell_voltage, &extermly_imbalance_bit, &cell_struct->SW1);
+			Precharge(charger_data_structure, &extermly_imbalance_bit);
 			/**************状态跳转*****************/
-			sum_of_cell = SumOfCell(cell_struct->cell_voltage);
+			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
 			if (sum_of_cell >= VLOWV) {
 				state_of_charger = EQUAL_CURRENT;
 			}
 			break;
 
 		case EQUAL_CURRENT:
-			EqualCurrent(cell_struct->cell_voltage, &extermly_imbalance_bit, &cell_struct->SW1);
+			EqualCurrent(charger_data_structure, &extermly_imbalance_bit);
 			/**************状态跳转*****************/
-			sum_of_cell = SumOfCell(cell_struct->cell_voltage);
-			extermly_imbalance_flag = ExtermlyImbalanceFlag(cell_struct->cell_voltage, extermly_imbalance_bit);
+			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
+			extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
 			if (extermly_imbalance_flag) {
 				state_of_charger = EXTREMLY_IMBALANCE;
 			}
@@ -140,22 +134,23 @@ void ChargeProcess(string s, string line_data)
 			break;
 
 		case EQUAL_VOLTAGE:
-			EqualVoltage(cell_struct->cell_voltage, &cell_struct->SW1);
+			EqualVoltage(charger_data_structure);
 			/**************状态跳转*****************/
-			sum_of_cell = SumOfCell(cell_struct->cell_voltage);
-			StateConvert(sum_of_cell, &cell_struct->stat1, &cell_struct->stat2);  //该步骤在硬件上可自动完成
-			if (cell_struct->stat1 == 0 && cell_struct->stat2 == 1) {
+			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
+			StateConvert(charger_data_structure);  //该步骤在硬件上可自动完成
+			if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == true) {
 				state_of_charger = CHARGE_COMPLETE;
 			}
 			break;
 
-		default: BatteryAbsent(cell_struct->cell_voltage, &cell_struct->stat1, &cell_struct->stat2, &cell_struct->SW1);
+		default: BatteryAbsent(charger_data_structure);
 		}
 
 		cout << endl;
 
-		outData << "i " << cell_struct->cell_voltage[0] << " " << cell_struct->cell_voltage[1] << " " << cell_struct->cell_voltage[2] << " " \
-			<< cell_struct->cell_voltage[3] << " " << cell_struct->bat << " " << cell_struct->stat1 << " " << cell_struct->stat2 << " " << cell_struct->SW1 << " o\n";
+		outData << "i " << charger_data_structure->cell_voltage[0] << " " << charger_data_structure->cell_voltage[1] << " " << charger_data_structure->cell_voltage[2] << " " \
+			<< charger_data_structure->cell_voltage[3] << " " << charger_data_structure->bat << " " << charger_data_structure->stat1 << " " << charger_data_structure->stat2\
+			<< " " << charger_data_structure->SW1 << " o\n";
 
 		//跳出循环
 		if (state_of_charger == BATTERY_ABSENT) {
@@ -167,27 +162,11 @@ void ChargeProcess(string s, string line_data)
 	Sleep(1000);
 }
 
-void StateConvert(double sum, int* stat1, int* stat2)
+void StateConvert(TypeOfStruct* cell_structure)
 {
+	double sum = SumOfCell(cell_structure->cell_voltage);
 	if (sum >= 16.8) {
-		*stat1 = 0;
-		*stat2 = 1;
+		cell_structure->stat1 = false;
+		cell_structure->stat2 = true;
 	}
-}
-
-voltage DataReceive(string s)
-{
-	voltage cell;
-	for (int i = 0; i < NUM; i++) {
-		for (int i = 0; i < NUM; i++) {
-			string cut = s.substr(5 * i + 2, 4);
-			cell.cell_voltage[i] = atof(cut.c_str());
-		}
-	}
-	cell.bat = s[22] - '0';
-	cell.stat1 = s[24] - '0';
-	cell.stat2 = s[26] - '0';
-	cell.SW1 = s[28] - '0';
-
-	return cell;
 }

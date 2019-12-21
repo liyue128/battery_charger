@@ -8,17 +8,17 @@ void CellBypass(double cell[NUM], double min);
 void OpenAllBypass(void);
 void CellBalancing(double cell[NUM], double min);
 
-bool ExtermlyImbalanceFlag(double cell_voltage[NUM], bool extermly_imbalance_flag);
-int ChargeStateJudge(int battery_detction, int extermly_imbalance_bit, double voltage[NUM], int stat1, int stat2);
+bool ExtermlyImbalanceFlag(TypeOfStruct* cell_structure, bool extermly_imbalance_flag);
+int ChargeStateJudge(TypeOfStruct * cell_structure, int extermly_imbalance_bit);
 
-void BatteryAbsent(double cell[NUM], int* stat1, int* stat2, bool* SW1);
-int DischargeInExtrem(double cell_voltage[NUM], bool* SW1);
-void ChargeComplete(bool* SW1);
-void Abnormal(bool* SW1);
-void InCharging(bool* SW1);
-void Precharge(double cell[NUM], bool* flag, bool* SW1);
-void EqualCurrent(double cell_voltage[NUM], bool* flag, bool* SW1);
-void EqualVoltage(double cell[NUM], bool* SW1);
+void BatteryAbsent(TypeOfStruct* cell_structure);
+int DischargeInExtrem(TypeOfStruct* cell_structure);
+void ChargeComplete(TypeOfStruct* cell_structure);
+void Abnormal(TypeOfStruct* cell_structure);
+void InCharging(TypeOfStruct* cell_structure);
+void Precharge(TypeOfStruct* cell_structure, bool* flag);
+void EqualCurrent(TypeOfStruct* cell_structure, bool* flag);
+void EqualVoltage(TypeOfStruct* cell_structure);
 
 
 #endif

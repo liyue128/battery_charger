@@ -2,11 +2,7 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
-#include <Windows.h>
-#include <iostream>
-#include <fstream>
 #include <string>
-using namespace std;
 
 #define NUM 4
 #define D1 0.02
@@ -14,22 +10,11 @@ using namespace std;
 #define RECH 4.10
 #define VLOWV 12.40
 #define VRECH 16.40
-/*#define BATTERY_ABSENT 0
-#define EXTREMLY_IMBALANCE 1
-#define CHARGE_COMPLETE 2
-#define CHARGE_ABNORMAL 3
-#define PRECHARGE 4
-#define EQUAL_CURRENT 5
-#define EQUAL_VOLTAGE 6*/
-#define T0 50
-#define T1 100
-#define T2 100
-#define T3 100
-#define T4 100
-#define T5 80
-
-void ChargeProcess(string s, string line_data);
-void StateConvert(double sum, int* stat1, int* stat2);
+#define T1 1000
+#define T2 1000
+#define T3 1000
+#define T4 1000
+#define T5 800	
 
 enum {
 	BATTERY_ABSENT,
@@ -41,5 +26,16 @@ enum {
 	EQUAL_VOLTAGE,
 };
 
+struct TypeOfStruct
+{
+	bool bat, stat1, stat2;
+	double cell_voltage[NUM];
+	bool SW1;
+
+	TypeOfStruct()
+	{
+		memset(this, 0, sizeof(TypeOfStruct));  //结构体初始化
+	}
+};//定义结构体
 
 #endif

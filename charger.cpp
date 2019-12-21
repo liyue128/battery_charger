@@ -1,12 +1,41 @@
-#include <iostream>
 #include "main.h"
+#include <iostream>
 #include "charger.h"
 #include "operation.h"
+#include <Windows.h>
 //#include "batterydata.h"
 
 using namespace std;
+TypeOfStruct DataReceive(string s);
 
+TypeOfStruct DataReceive(string s)
+{
+	TypeOfStruct cell;
+#ifdef _I2C_H
 
+	cell.cell_voltage[i]
+		cell.bat
+		cell.stat1
+		cell.stat2
+		cell.SW1
+
+#else
+
+	for (int i = 0; i < NUM; i++) {
+		for (int i = 0; i < NUM; i++) {
+			string cut = s.substr(5 * i + 2, 4);
+			cell.cell_voltage[i] = atof(cut.c_str());
+		}
+	}
+	cell.bat = s[22] - '0';
+	cell.stat1 = s[24] - '0';
+	cell.stat2 = s[26] - '0';
+	cell.SW1 = s[28] - '0';
+
+#endif // 
+
+	return cell;
+}
 
 //开启相应的旁路
 void CellBypass(double cell[NUM], double min)
@@ -18,7 +47,7 @@ void CellBypass(double cell[NUM], double min)
 		{
 			cout << "close inner bypass of " << i << endl;
 			cout << "open outer bypass of " << i << endl;
-			cell[i] -= D1;
+			cell[i] -= 0.5 * D1;
 		}  //仅闭合内部放电旁路
 
 		if (cell[i] - min > D2&& cell[i] - min <= D1 + D2)
@@ -32,7 +61,7 @@ void CellBypass(double cell[NUM], double min)
 		{
 			cout << "close inner bypass of " << i << endl;
 			cout << "close outer bypass of " << i << endl;
-			cell[i] -= D1 + 0.25 * D2;
+			cell[i] -= 0.5 * D1 + 0.25 * D2;
 		}  //闭合内部和外部旁路
 	}
 }
@@ -56,11 +85,11 @@ void CellBalancing(double cell[NUM], double min)
 
 
 //极端不平衡状态标志
-bool ExtermlyImbalanceFlag(double cell_voltage[NUM], bool extermly_imbalance_flag)
+bool ExtermlyImbalanceFlag(TypeOfStruct* cell_structure, bool extermly_imbalance_flag)
 {
-	double max_of_cell = MaxOfCell(cell_voltage);  //求最大值
-	double min_of_cell = MinOfCell(cell_voltage);  //求最小值
-	double sum_of_cell = SumOfCell(cell_voltage);  //求和
+	double max_of_cell = MaxOfCell(cell_structure->cell_voltage);  //求最大值
+	double min_of_cell = MinOfCell(cell_structure->cell_voltage);  //求最小值
+	double sum_of_cell = SumOfCell(cell_structure->cell_voltage);  //求和
 
 	int flag = (max_of_cell - min_of_cell >= D1) && (sum_of_cell > VLOWV) && \
 		((max_of_cell >= RECH) || extermly_imbalance_flag);
@@ -68,12 +97,12 @@ bool ExtermlyImbalanceFlag(double cell_voltage[NUM], bool extermly_imbalance_fla
 }
 
 //判断充电状态接口
-int ChargeStateJudge(int battery_detction, int extermly_imbalance_bit, double voltage[NUM], int stat1, int stat2)
+int ChargeStateJudge(TypeOfStruct* cell_structure, int extermly_imbalance_bit)
 {
 	int bit = 0;
 
-	double sum = SumOfCell(voltage);
-	if (!battery_detction) {
+	double sum = SumOfCell(cell_structure->cell_voltage);
+	if (!cell_structure->bat) {
 		bit = BATTERY_ABSENT;
 	}
 	else {
@@ -82,7 +111,7 @@ int ChargeStateJudge(int battery_detction, int extermly_imbalance_bit, double vo
 		}
 		else {
 			//         charger_state_bit = START_CHARGE;
-			if (stat1 == 1 && stat2 == 0) {
+			if (cell_structure->stat1 == true && cell_structure->stat2 == false) {
 				//					bit = CHARGE_IN_PROCESS;
 				if (sum < VLOWV) {
 					bit = PRECHARGE;
@@ -94,10 +123,10 @@ int ChargeStateJudge(int battery_detction, int extermly_imbalance_bit, double vo
 					bit = EQUAL_VOLTAGE;
 				}
 			}
-			if (stat1 == 0 && stat2 == 1) {
+			if (cell_structure->stat1 == false && cell_structure->stat2 == true) {
 				bit = CHARGE_COMPLETE;
 			}
-			if (stat1 == 0 && stat2 == 0) {
+			if (cell_structure->stat1 == false && cell_structure->stat2 == false) {
 				bit = CHARGE_ABNORMAL;
 			}
 		}
@@ -109,9 +138,9 @@ int ChargeStateJudge(int battery_detction, int extermly_imbalance_bit, double vo
 
 
 //未检测到电池
-void BatteryAbsent(double cell[NUM], int* stat1, int* stat2, bool* SW1)
+void BatteryAbsent(TypeOfStruct* cell_structure)
 {
-	SwEnd(SW1);
+	SwEnd(&cell_structure->SW1);
 	DisableTimer();
 	/*	for (int i = 0; i < NUM; i++) {
 			cell[i] = 0;
@@ -123,100 +152,100 @@ void BatteryAbsent(double cell[NUM], int* stat1, int* stat2, bool* SW1)
 }
 
 //极端不平衡状态处理方式
-int DischargeInExtrem(double cell_voltage[NUM], bool* SW1)
+int DischargeInExtrem(TypeOfStruct* cell_structure)
 {
 	int extermly_imbalance_flag;
-	double min_of_cell = MinOfCell(cell_voltage);  //求最小值
+	double min_of_cell = MinOfCell(cell_structure->cell_voltage);  //求最小值
 	bool timerout = false;
 
-	InExtrem(SW1);
+	InExtrem(&cell_structure->SW1);
 	cout << "extremly imbalance" << endl;
+	cout << "亮绿灯" << endl;
 	if (timerout)  //计时器超时
 	{
 		extermly_imbalance_flag = 0;
-		Abnormal(SW1);  //异常状态
+		Abnormal(cell_structure);  //异常状态
 	}
 	else {
 		extermly_imbalance_flag = 1;
-		CellBalancing(cell_voltage, min_of_cell);
+		CellBalancing(cell_structure->cell_voltage, min_of_cell);
 	}
 	return extermly_imbalance_flag;
 }
 
 //充电完成
-void ChargeComplete(bool* SW1)
+void ChargeComplete(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(SW1);
+	NotInExtrem(&cell_structure->SW1);
 	//	SW = 0;
 	cout << "charge complete" << endl;
-	SwEnd(SW1);
+	SwEnd(&cell_structure->SW1);
 	cout << "亮黄灯" << endl;
 	//	cout << "delay T1" << endl;
 	Sleep(T1);
 }
 
 //充电异常
-void Abnormal(bool* SW1)
+void Abnormal(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(SW1);
+	NotInExtrem(&cell_structure->SW1);
 	//	SW = 0;
 
 	cout << "Abnormal" << endl;
-	SwEnd(SW1);
+	SwEnd(&cell_structure->SW1);
 	cout << "亮红灯, 蜂鸣" << endl;
 	//	cout << "delay T2" << endl;
 	Sleep(T2);
 }
 
 //显示正在充电状态
-void InCharging(bool* SW1)
+void InCharging(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(SW1);
+	NotInExtrem(&cell_structure->SW1);
 	cout << "亮绿灯" << endl;
 }
 
 //预充电状态
-void Precharge(double cell[NUM], bool* flag, bool* SW1)
+void Precharge(TypeOfStruct* cell_structure, bool* flag)
 {
 	*flag = 0;
 
-	InCharging(SW1);
+	InCharging(cell_structure);
 	cout << "stage of precharge" << endl;
 	for (int i = 0; i < NUM; i++) {
-		cell[i] += D1;
+		cell_structure->cell_voltage[i] += D1;
 	}
 	Sleep(T3);
 	//	cout << "delay T3" << endl;
 }
 
 //恒流充电状态
-void EqualCurrent(double cell_voltage[NUM], bool* flag, bool* SW1)
+void EqualCurrent(TypeOfStruct* cell_structure, bool* flag)
 {
-	double max_of_cell = MaxOfCell(cell_voltage);
-	double min_of_cell = MinOfCell(cell_voltage);
-
 	*flag = 0;
 
-	InCharging(SW1);
+	InCharging(cell_structure);
 	cout << "stage of equalcurrent" << endl;
 	for (int i = 0; i < NUM; i++) {
-		cell_voltage[i] += D1 + 0.5 * D2;
+		cell_structure->cell_voltage[i] += D1 + 0.5 * D2;
 	}
 
+	double max_of_cell = MaxOfCell(cell_structure->cell_voltage);
+	double min_of_cell = MinOfCell(cell_structure->cell_voltage);
 	if (max_of_cell - min_of_cell > D1) {
-		CellBalancing(cell_voltage, min_of_cell);
+		CellBalancing(cell_structure->cell_voltage, min_of_cell);
 	}
 	//	cout << "delay T4" << endl;
 	Sleep(T4);
 }
 
 //恒压充电状态
-void EqualVoltage(double cell[NUM], bool* SW1)
+void EqualVoltage(TypeOfStruct* cell_structure)
 {
-	InCharging(SW1);
+	InCharging(cell_structure);
 	cout << "stage of equalvoltage" << endl;
 	for (int i = 0; i < NUM; i++) {
-		cell[i] += D1;
+		cell_structure->cell_voltage[i] += D1;
 	}
 
 	//	cout << "delay T5" << endl;
