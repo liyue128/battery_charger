@@ -4,9 +4,9 @@
 
 void EnableTimer(void);
 void DisableTimer(void);
-double MaxOfCell(double cell[]);
-double MinOfCell(double cell[]);
-double SumOfCell(double cell[]);
+float MaxOfCell(float cell[]);
+float MinOfCell(float cell[]);
+float SumOfCell(float cell[]);
 void SwStart(bool* SW1);
 void SwEnd(bool* SW1);
 void NotInExtrem(bool* SW1);

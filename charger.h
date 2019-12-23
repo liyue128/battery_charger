@@ -4,9 +4,9 @@
 
 #define NUM 4
 
-void CellBypass(double cell[NUM], double min);
+void CellBypass(float cell[NUM], float min);
 void OpenAllBypass(void);
-void CellBalancing(double cell[NUM], double min);
+void CellBalancing(float cell[NUM], float min);
 
 bool ExtermlyImbalanceFlag(TypeOfStruct* cell_structure, bool extermly_imbalance_flag);
 int ChargeStateJudge(TypeOfStruct * cell_structure, int extermly_imbalance_bit);

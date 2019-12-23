@@ -33,27 +33,27 @@ void DisableTimer(void)
 }
 
 //求电压最大值
-double MaxOfCell(double cell[])
+float MaxOfCell(float cell[])
 {
-	double max = cell[0];
+	float max = cell[0];
 	for (int i = 0; i < NUM; i++)
 		if (cell[i] > max) max = cell[i];
 	return max;
 }
 
 //求电压最小值
-double MinOfCell(double cell[])
+float MinOfCell(float cell[])
 {
-	double min = cell[0];
+	float min = cell[0];
 	for (int i = 0; i < NUM; i++)
 		if (cell[i] < min) min = cell[i];
 	return min;
 }
 
 //求总电压
-double SumOfCell(double cell[])
+float SumOfCell(float cell[])
 {
-	double sum = 0;
+	float sum = 0;
 	for (int i = 0; i < NUM; i++) sum += cell[i];
 	return sum;
 }

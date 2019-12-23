@@ -5,8 +5,6 @@
 #include <string>
 
 #define NUM 4
-#define D1 0.02
-#define D2 0.08
 #define RECH 4.10
 #define VLOWV 12.40
 #define VRECH 16.40
@@ -29,7 +27,7 @@ enum {
 struct TypeOfStruct
 {
 	bool bat, stat1, stat2;
-	double cell_voltage[NUM];
+	float cell_voltage[NUM];
 	bool SW1;
 
 	TypeOfStruct()

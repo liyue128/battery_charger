@@ -38,7 +38,7 @@ void ChargeProcess(string s, string line_data)
 {
 	bool extermly_imbalance_flag = 0;
 	bool extermly_imbalance_bit = 0;
-	double sum_of_cell = 0;
+	float sum_of_cell = 0;
 	int state_of_charger = BATTERY_ABSENT;
 	int t = 0;  //Ä£Äâ¼ÆÊ±Æ÷
 
