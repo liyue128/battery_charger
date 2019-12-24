@@ -9,6 +9,7 @@ float D2 = 0.08;
 using namespace std;
 TypeOfStruct DataReceive(string s);
 
+
 TypeOfStruct DataReceive(string s)
 {
 	TypeOfStruct cell;
@@ -21,18 +22,19 @@ TypeOfStruct DataReceive(string s)
 		cell.SW1
 
 #else
-
-	for (int i = 0; i < NUM; i++) {
+	if (s[0] == 'i' && s[30] == 'o') {
 		for (int i = 0; i < NUM; i++) {
-			string cut = s.substr(5 * i + 2, 4);
-			cell.cell_voltage[i] = atof(cut.c_str());
+			for (int i = 0; i < NUM; i++) {
+				string cut = s.substr(5 * i + 2, 4);
+				cell.cell_voltage[i] = atof(cut.c_str());
+			}
 		}
+		cell.bat = s[22] - '0';
+		cell.stat1 = s[24] - '0';
+		cell.stat2 = s[26] - '0';
+		cell.SW1 = s[28] - '0';
+		cell.t = 500;
 	}
-	cell.bat = s[22] - '0';
-	cell.stat1 = s[24] - '0';
-	cell.stat2 = s[26] - '0';
-	cell.SW1 = s[28] - '0';
-
 #endif  
 
 	return cell;
@@ -48,21 +50,18 @@ void CellBypass(float cell[NUM], float min)
 		{
 			cout << "close inner bypass of " << i << endl;
 			cout << "open outer bypass of " << i << endl;
-			cell[i] -= 0.5 * D1;
 		}  //仅闭合内部放电旁路
 
 		if (cell[i] - min > D2&& cell[i] - min <= D1 + D2)
 		{
 			cout << "open inner bypass of " << i << endl;
 			cout << "close outer bypass of " << i << endl;
-			cell[i] -= 0.25 * D2;
 		}  //仅闭合外部放电旁路
 
 		if (cell[i] - min > D1 + D2)
 		{
 			cout << "close inner bypass of " << i << endl;
 			cout << "close outer bypass of " << i << endl;
-			cell[i] -= 0.5 * D1 + 0.25 * D2;
 		}  //闭合内部和外部旁路
 	}
 }
@@ -75,11 +74,11 @@ void OpenAllBypass(void)
 }
 
 //平衡电压接口
-void CellBalancing(float cell[NUM], float min)
+void CellBalancing(TypeOfStruct* cell_structure, float min)
 {
-	CellBypass(cell, min);
-	cout << "delay T4" << endl;
-//	Sleep(T4);
+	CellBypass(cell_structure->cell_voltage, min);
+	cout << "delay " << T4 << endl;
+	cell_structure->t -= T4;
 	//关闭所有旁路
 	OpenAllBypass();
 }
@@ -144,13 +143,10 @@ void BatteryAbsent(TypeOfStruct* cell_structure)
 {
 	SwEnd(&cell_structure->SW1);
 	DisableTimer();
-	/*	for (int i = 0; i < NUM; i++) {
-			cell[i] = 0;
-		}
-		*stat1 = 0;
-		*stat2 = 0;*/
-	cout << "delay T1" << endl;
-//	Sleep(T1);
+	cout << "battery absent" << endl;
+
+	cout << "delay "<< T1 << endl;
+	cell_structure->t -= T1;
 }
 
 //极端不平衡状态处理方式
@@ -170,7 +166,7 @@ int DischargeInExtrem(TypeOfStruct* cell_structure)
 	}
 	else {
 		extermly_imbalance_flag = 1;
-		CellBalancing(cell_structure->cell_voltage, min_of_cell);
+		CellBalancing(cell_structure, min_of_cell);
 	}
 	return extermly_imbalance_flag;
 }
@@ -178,32 +174,29 @@ int DischargeInExtrem(TypeOfStruct* cell_structure)
 //充电完成
 void ChargeComplete(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(&cell_structure->SW1);
-	//	SW = 0;
 	cout << "charge complete" << endl;
 	SwEnd(&cell_structure->SW1);
 	cout << "亮黄灯" << endl;
-	cout << "delay T1" << endl;
-//	Sleep(T1);
+
+	cout << "delay " << T1 << endl;
+	cell_structure->t -= T1;
 }
 
 //充电异常
 void Abnormal(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(&cell_structure->SW1);
-	//	SW = 0;
-
 	cout << "Abnormal" << endl;
 	SwEnd(&cell_structure->SW1);
 	cout << "亮红灯, 蜂鸣" << endl;
-	cout << "delay T2" << endl;
-//	Sleep(T2);
+
+	cout << "delay " << T2 << endl;
+	cell_structure->t -= T2;
 }
 
 //显示正在充电状态
 void InCharging(TypeOfStruct* cell_structure)
 {
-	NotInExtrem(&cell_structure->SW1);
+	BeforeCharging(&cell_structure->SW1);
 	cout << "亮绿灯" << endl;
 }
 
@@ -214,11 +207,9 @@ void Precharge(TypeOfStruct* cell_structure, bool* flag)
 
 	InCharging(cell_structure);
 	cout << "stage of precharge" << endl;
-	for (int i = 0; i < NUM; i++) {
-		cell_structure->cell_voltage[i] += D1;
-	}
-//	Sleep(T3);
-	cout << "delay T3" << endl;
+
+	cout << "delay " << T3 << endl;
+	cell_structure->t -= T3;
 }
 
 //恒流充电状态
@@ -228,17 +219,12 @@ void EqualCurrent(TypeOfStruct* cell_structure, bool* flag)
 
 	InCharging(cell_structure);
 	cout << "stage of equalcurrent" << endl;
-	for (int i = 0; i < NUM; i++) {
-		cell_structure->cell_voltage[i] += D1 + 0.5 * D2;
-	}
 
 	float max_of_cell = MaxOfCell(cell_structure->cell_voltage);
 	float min_of_cell = MinOfCell(cell_structure->cell_voltage);
 	if (max_of_cell - min_of_cell > D1) {
-		CellBalancing(cell_structure->cell_voltage, min_of_cell);
+		CellBalancing(cell_structure, min_of_cell);
 	}
-	cout << "delay T4" << endl;
-//	Sleep(T4);
 }
 
 //恒压充电状态
@@ -246,10 +232,7 @@ void EqualVoltage(TypeOfStruct* cell_structure)
 {
 	InCharging(cell_structure);
 	cout << "stage of equalvoltage" << endl;
-	for (int i = 0; i < NUM; i++) {
-		cell_structure->cell_voltage[i] += D1;
-	}
 
-	cout << "delay T5" << endl;
-//	Sleep(T5);
+	cout << "delay " << T5 << endl;
+	cell_structure->t -= T5;
 }

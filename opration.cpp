@@ -22,14 +22,14 @@ double calcute(data)
 void EnableTimer(void)
 {
 	//若计时器未开启，则使能计时器
-	printf("start timer.\n");
+	cout << "start timer.\n";
 }
 
 //禁用计时器
 void DisableTimer(void)
 {
 	//若计时器已开启,则禁用计时器
-	printf("end timer.\n");
+	cout << "end timer.\n";
 }
 
 //求电压最大值
@@ -80,7 +80,7 @@ void SwEnd(bool* SW1)
 	cout << "SW = 0" << endl;
 }
 
-void NotInExtrem(bool* SW1)
+void BeforeCharging(bool* SW1)
 {
 	SwStart(SW1);
 	DisableTimer();

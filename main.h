@@ -2,17 +2,19 @@
 #ifndef _MAIN_H
 #define _MAIN_H
 
+
 #include <string>
 
 #define NUM 4
 #define RECH 4.10
 #define VLOWV 12.40
 #define VRECH 16.40
-#define T1 1000
-#define T2 1000
-#define T3 1000
-#define T4 1000
-#define T5 800	
+#define T0 100
+#define T1 200
+#define T2 200
+#define T3 350
+#define T4 300
+#define T5 350	
 
 enum {
 	BATTERY_ABSENT,
@@ -26,9 +28,9 @@ enum {
 
 struct TypeOfStruct
 {
-	bool bat, stat1, stat2;
+	bool bat, stat1, stat2, SW1;
 	float cell_voltage[NUM];
-	bool SW1;
+	int t;
 
 	TypeOfStruct()
 	{

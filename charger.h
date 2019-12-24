@@ -6,7 +6,7 @@
 
 void CellBypass(float cell[NUM], float min);
 void OpenAllBypass(void);
-void CellBalancing(float cell[NUM], float min);
+void CellBalancing(TypeOfStruct* cell_structure, float min);
 
 bool ExtermlyImbalanceFlag(TypeOfStruct* cell_structure, bool extermly_imbalance_flag);
 int ChargeStateJudge(TypeOfStruct * cell_structure, int extermly_imbalance_bit);
