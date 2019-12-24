@@ -143,7 +143,7 @@ void BatteryAbsent(TypeOfStruct* cell_structure)
 {
 	SwEnd(&cell_structure->SW1);
 	DisableTimer();
-	cout << "battery absent" << endl;
+	cout << "ÁÁºìµÆ\n" << "battery absent" << endl;
 
 	cout << "delay "<< T1 << endl;
 	cell_structure->t -= T1;
@@ -224,6 +224,10 @@ void EqualCurrent(TypeOfStruct* cell_structure, bool* flag)
 	float min_of_cell = MinOfCell(cell_structure->cell_voltage);
 	if (max_of_cell - min_of_cell > D1) {
 		CellBalancing(cell_structure, min_of_cell);
+	}
+	else {
+		cout << "delay " << T4 << endl;
+		cell_structure->t -= T4;
 	}
 }
 

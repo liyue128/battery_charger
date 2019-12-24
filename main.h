@@ -9,7 +9,7 @@
 #define RECH 4.10
 #define VLOWV 12.40
 #define VRECH 16.40
-#define T0 100
+#define T0 50
 #define T1 200
 #define T2 200
 #define T3 350
@@ -26,7 +26,7 @@ enum {
 	EQUAL_VOLTAGE,
 };
 
-struct TypeOfStruct
+volatile struct TypeOfStruct
 {
 	bool bat, stat1, stat2, SW1;
 	float cell_voltage[NUM];
@@ -37,5 +37,6 @@ struct TypeOfStruct
 		memset(this, 0, sizeof(TypeOfStruct));  //结构体初始化
 	}
 };//定义结构体
+TypeOfStruct DataReceive(std::string s);
 
 #endif
