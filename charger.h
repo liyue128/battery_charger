@@ -4,6 +4,7 @@
 
 #define NUM 4
 
+void PrepareForCharge(TypeOfStruct* cell_structure);
 void CellBypass(float cell[NUM], float min);
 void OpenAllBypass(void);
 void CellBalancing(TypeOfStruct* cell_structure, float min);

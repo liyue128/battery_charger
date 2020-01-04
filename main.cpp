@@ -32,33 +32,33 @@ int main()
 			continue;
 
 //		while (1) {
-		//数据接收端口,接收并解析数据
-		*charger_data_structure = DataReceive(strLine);
-		sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
+			//数据接收端口,接收并解析数据
+			*charger_data_structure = DataReceive(strLine);
+			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
 
-
-		//仅用于测试
-		if (t == 0) {
-			
-			t = 1;
-			extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
-			state_of_charger = ChargeStateJudge(charger_data_structure, extermly_imbalance_flag);
-		}
+			//检测到电池并且闭合开关后的第一次循环
+			if (t == 0) {
+				t = 1;
+				extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
+				state_of_charger = ChargeStateJudge(charger_data_structure, extermly_imbalance_flag);
+			}
 
 			if (!charger_data_structure->bat) {
 				state_of_charger = BATTERY_ABSENT;
 			}
-			else if (state_of_charger == BATTERY_ABSENT) {  //刚开始检测到电池
+			else if (state_of_charger == BATTERY_ABSENT) {  //absent后检测到电池,闭合sw1后等待一个周期,使充电芯片准备完毕
 				t = 0;
-				SwStart(&charger_data_structure->SW1);
-				cout << "delay " << charger_data_structure->t << endl;
-				cout << endl;
+				PrepareForCharge(charger_data_structure);
 				continue;
 			}
-
-			//检测异常
-			if (state_of_charger >= PRECHARGE && state_of_charger <= EQUAL_VOLTAGE) {
-				if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == false) {
+			
+			if (state_of_charger >= PRECHARGE && state_of_charger <= EQUAL_VOLTAGE) { 
+				if (!charger_data_structure->SW1) {  //退出极端不平衡状态后的第一个周期
+					t = 0;
+					PrepareForCharge(charger_data_structure);
+					continue;
+				}
+				if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == false) {  //检测充电过程中发生的异常
 					state_of_charger = CHARGE_ABNORMAL;
 				}
 			}
@@ -83,7 +83,8 @@ int main()
 				/**************状态跳转*****************/
 				sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
 				extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);  //更新极端不平衡标识位
-				if (++t >= 15) { state_of_charger = CHARGE_ABNORMAL; }  //模拟MCU充电计时器超时
+				if (++t >= 15) 
+				{ state_of_charger = CHARGE_ABNORMAL; }  //模拟MCU充电计时器超时
 				if (sum_of_cell < VLOWV) {
 					state_of_charger = PRECHARGE;
 				}
@@ -139,17 +140,15 @@ int main()
 			default: BatteryAbsent(charger_data_structure);
 			}
 
-			cout << "delay " << charger_data_structure->t << endl;
-			cout << endl;
+			cout << "delay " << charger_data_structure->t << endl << endl;
 
-			Sleep(10);
+//			Sleep(10);
 //		}
 	}
 
 	delete charger_data_structure;
 	return 0;
 }
-
 
 /*void StateConvert(TypeOfStruct* cell_structure)
 {

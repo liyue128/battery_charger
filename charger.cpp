@@ -40,6 +40,13 @@ TypeOfStruct DataReceive(string s)
 	return cell;
 }
 
+//该函数用于从battery_absent,extremly_imbalance状态切换至充电状态时,给充电芯片从上电到开始工作的准备阶段留出充足的时间
+void PrepareForCharge(TypeOfStruct* cell_structure)
+{
+	SwStart(&cell_structure->SW1);
+	cout << "delay " << cell_structure->t << endl << endl;
+}
+
 //开启相应的旁路
 void CellBypass(float cell[NUM], float min)
 {
