@@ -1,9 +1,15 @@
 #include "main.h"
 #include <iostream>
-#include <fstream>
 #include <Windows.h>
+//#include <time.h>  //计算实时时间需用到
 #include "operation.h"
 #include "charger.h"
+#define MCU_TIMEROUT 100
+#define CHIP_TIMEROUT 500
+#define CYCLE_TIME 0.5
+#define OFF 0
+#define ON 1
+#define D1 0.02
 
 using namespace std;
 
@@ -12,149 +18,154 @@ int main()
 {
 	TypeOfStruct* charger_data_structure;
 	charger_data_structure = new TypeOfStruct;
-	bool extermly_imbalance_flag = 0;
-	bool extermly_imbalance_bit = 0;
-	int state_of_charger = 0;
-	float sum_of_cell = 0;
-	int t = 1;
-	
-	//测试输入文件数据流
-	ifstream file;
-	file.open("D:\\test\\i\\input1.txt", ios::in);
-	if (!file.is_open())
-		return 0;
+	bool charge_abnormal_flag = false;
+	int status_of_charger = 0;
+	double battery_voltage = 0.0, max_cell_voltage=0.0, min_cell_voltage=0.0;
+	bool doc_eof = false;
+	//uint8_t time_stage1, time_stage2;  //acquire current timestamp
 
-	string strLine;
+	bool precharge_timerout=false, fastcharge_timerout=false, discharge_timerout=false;  //定义充电计时器超时标志位
 
-	while (getline(file, strLine))
-	{
-		if (strLine.empty() || strLine[0] == '#')
-			continue;
+	//数据接收端口,接收并解析数据
+	//*charger_data_structure = DataReceive(&doc_eof);
 
-//		while (1) {
-			//数据接收端口,接收并解析数据
-			*charger_data_structure = DataReceive(strLine);
-			sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
+	//初始化
+	/*timer_init();
+	i2c_init();
+	spi_init();
+	gpio_init();
+	*/
 
-			//检测到电池并且闭合开关后的第一次循环
-			if (t == 0) {
-				t = 1;
-				extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
-				state_of_charger = ChargeStateJudge(charger_data_structure, extermly_imbalance_flag);
+	//计算ADC误差并将计算值返回到监控芯片内部存储
+
+	while (1) {
+		
+		// uint8_t time_stage1 = rtcTime.Seconds;  //acquire current timestamp
+
+		//每次while(1)循环,必先检查bat;如果处于precharge or fastcharge,再检查异常
+		//if(reset)	status_of_charger=BATTERY_ABSENT;
+		//u8 bat=GPIO_ReadInputDataBit(GPIO_TypeDef* GPIOx, u16 GPIO_Pin);
+		if (status_of_charger == PRECHARGE || status_of_charger == FASTCHARGE || status_of_charger == CHARGE_COMPLETE) {
+			charge_abnormal_flag = AbnormalDectect();
+		}
+
+		switch (status_of_charger)
+		{
+		case BATTERY_ABSENT:
+			ChargeAbsent();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  
+				status_of_charger = BATTERY_ABSENT;
 			}
-
-			if (!charger_data_structure->bat) {
-				state_of_charger = BATTERY_ABSENT;
+			else if (battery_voltage < VLOWV) {
+				status_of_charger = PRECHARGE;
 			}
-			else if (state_of_charger == BATTERY_ABSENT) {  //absent后检测到电池,闭合sw1后等待一个周期,使充电芯片准备完毕
-				t = 0;
-				PrepareForCharge(charger_data_structure);
-				continue;
+			else if(max_cell_voltage - min_cell_voltage < D1) {
+				status_of_charger = FASTCHARGE;
 			}
-			
-			if (state_of_charger >= PRECHARGE && state_of_charger <= EQUAL_VOLTAGE) { 
-				if (!charger_data_structure->SW1) {  //退出极端不平衡状态后的第一个周期
-					t = 0;
-					PrepareForCharge(charger_data_structure);
-					continue;
-				}
-				if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == false) {  //检测充电过程中发生的异常
-					state_of_charger = CHARGE_ABNORMAL;
-				}
+			else {
+				status_of_charger = DISCHARGE;
 			}
+			break;
 
-			//极端不平衡状态检测接口
-			extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
-			cout << "delay " << T0 << endl;  //该阶段消耗的时间为Tn
-			charger_data_structure->t -= T0;
+		case CHARGE_ABNORMAL:
+			ChargeAbnormal();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  //|| SYSTEM_RESET
+				status_of_charger = BATTERY_ABSENT;
+			}
+			else {
+				status_of_charger = CHARGE_ABNORMAL;
+			}
+			break;
 
-			switch (state_of_charger)
+		case CHARGE_COMPLETE:
+			ChargeComplete();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  //|| SYSTEM_RESET
+				status_of_charger = BATTERY_ABSENT;
+			}
+			else if (charge_abnormal_flag)
 			{
-			case BATTERY_ABSENT:
-				BatteryAbsent(charger_data_structure);
-				/**************状态跳转*****************/
-				if (charger_data_structure->bat) {
-					state_of_charger = ChargeStateJudge(charger_data_structure, extermly_imbalance_flag);  //未检测到电池状态可能跳转到任意状态
-				}
-				break;
-
-			case EXTREMLY_IMBALANCE:
-				extermly_imbalance_bit = DischargeInExtrem(charger_data_structure);
-				/**************状态跳转*****************/
-				sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
-				extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);  //更新极端不平衡标识位
-				if (++t >= 15) 
-				{ state_of_charger = CHARGE_ABNORMAL; }  //模拟MCU充电计时器超时
-				if (sum_of_cell < VLOWV) {
-					state_of_charger = PRECHARGE;
-				}
-				else if (!extermly_imbalance_flag) {
-					if (sum_of_cell < VRECH) {
-						state_of_charger = EQUAL_CURRENT;
-					}
-					else {
-						state_of_charger = EQUAL_VOLTAGE;
-					}
-				}
-				break;
-
-			case CHARGE_COMPLETE:
-				ChargeComplete(charger_data_structure);
-				break;
-
-			case CHARGE_ABNORMAL:
-				Abnormal(charger_data_structure);
-				break;
-
-			case PRECHARGE:
-				Precharge(charger_data_structure, &extermly_imbalance_bit);
-				/**************状态跳转*****************/
-				sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
-				if (sum_of_cell >= VLOWV) {
-					state_of_charger = EQUAL_CURRENT;
-				}
-				break;
-
-			case EQUAL_CURRENT:
-				EqualCurrent(charger_data_structure, &extermly_imbalance_bit);
-				/**************状态跳转*****************/
-				sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
-				extermly_imbalance_flag = ExtermlyImbalanceFlag(charger_data_structure, extermly_imbalance_bit);
-				if (extermly_imbalance_flag) {
-					state_of_charger = EXTREMLY_IMBALANCE;
-				}
-				else if (sum_of_cell >= VRECH) {  //由于已经发生电压数据更新,使用上一时刻的数据会造成延迟
-					state_of_charger = EQUAL_VOLTAGE;
-				}
-				break;
-
-			case EQUAL_VOLTAGE:
-				EqualVoltage(charger_data_structure);
-				/**************状态跳转*****************/
-				sum_of_cell = SumOfCell(charger_data_structure->cell_voltage);
-				if (charger_data_structure->stat1 == false && charger_data_structure->stat2 == true) {
-					state_of_charger = CHARGE_COMPLETE;
-				}
-				break;
-
-			default: BatteryAbsent(charger_data_structure);
+				status_of_charger = CHARGE_ABNORMAL;
 			}
+			else {
+				status_of_charger = CHARGE_COMPLETE;
+			}
+			break;
 
-			cout << "delay " << charger_data_structure->t << endl << endl;
+		case PRECHARGE:
+			Precharge();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  //|| SYS_RESET
+				status_of_charger = BATTERY_ABSENT;
+			}
+			else if (charge_abnormal_flag) {
+				status_of_charger = CHARGE_ABNORMAL;
+			}
+			else if (!precharge_timerout) {
+				status_of_charger = PRECHARGE;
+			}
+			else if (precharge_timerout) {
+				UpdateVoltage(charger_data_structure);  //更新电池电压数据
+				if (max_cell_voltage - min_cell_voltage >= D1) {
+					status_of_charger = DISCHARGE;
+				}
+				else {
+					status_of_charger = FASTCHARGE;
+				}
+			}
+			break;
 
-//			Sleep(10);
-//		}
+		case FASTCHARGE:
+			Fastcharge();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  //|| SYS_RESET
+				status_of_charger = BATTERY_ABSENT;
+			}
+			else if (charge_abnormal_flag) {
+				status_of_charger = CHARGE_ABNORMAL;
+			}
+			else if (charger_data_structure->stat1 == OFF && charger_data_structure->stat2 == ON) {
+				status_of_charger = CHARGE_COMPLETE;
+			}
+			else {
+				status_of_charger = FASTCHARGE;
+			}
+			break;
+
+		case DISCHARGE:  //在该模式下,没有考虑异常情况
+			Discharge();
+			/**************状态跳转*****************/
+			if (!charger_data_structure->bat) {  //|| SYS_RESET
+				status_of_charger = BATTERY_ABSENT;
+			}
+			else if (!discharge_timerout) {
+				status_of_charger = DISCHARGE;
+			}
+			else {
+				UpdateVoltage(charger_data_structure);  //更新电池电压数据
+				if (battery_voltage < VLOWV) {
+					status_of_charger = PRECHARGE;
+				}
+				else if (max_cell_voltage - min_cell_voltage < D1) {
+					status_of_charger = FASTCHARGE;
+				}
+				else {
+					status_of_charger = DISCHARGE;
+				}
+			}
+			break;
+		
+		default: ChargeAbsent();
+		}
+		
 	}
+
+	// uint8_t time_stage2 = rtcTime.Seconds;  //acquire current timestamp
+	//if(T>time_stage2-time_stage1) delay(T-(time_stage2-time_stage1));
+
 
 	delete charger_data_structure;
 	return 0;
 }
-
-/*void StateConvert(TypeOfStruct* cell_structure)
-{
-	double sum = SumOfCell(cell_structure->cell_voltage);
-	if (sum >= 16.8) {
-		cell_structure->stat1 = false;
-		cell_structure->stat2 = true;
-	}
-}*/
